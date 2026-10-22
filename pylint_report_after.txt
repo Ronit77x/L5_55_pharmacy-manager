@@ -1,0 +1,11 @@
+﻿python : Could not find platform independent libraries <prefix>
+At line:1 char:1
++ python -m pylint pharmacy_manager.py 2>&1 | Out-File -Encoding utf8 p ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Could not find ...raries <prefix>:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+--------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
+
