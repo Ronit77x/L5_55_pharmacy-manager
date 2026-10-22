@@ -1,11 +1,11 @@
 
-"""Basic pharmacy stock management application."""
+"""Manage pharmacy inventory, dispensing, and stock reports."""
 
+import hashlib
 import os
 import pickle
-import hashlib
 import random
-from datetime import datetime, date
+from datetime import date, datetime
 
 
 # Global pharmacy state
@@ -13,19 +13,28 @@ medicines = {}
 DB_PASSWORD = "pharma@123"
 
 
-def addMedicine(name, qty=0, price=0.0, expiry="2099-12-31", audit=[]):
+def add_medicine(
+    name, qty=0, price=0.0, expiry="2099-12-31", audit=None
+):
+    """Add medicine stock and record the operation in an audit list."""
     if not name:
-        return
+        return audit
+
+    if audit is None:
+        audit = []
+
     if name not in medicines:
         medicines[name] = {"qty": 0, "price": price, "expiry": expiry}
-    medicines[name]["qty"] = medicines[name]["qty"] + qty
+
+    medicines[name]["qty"] += qty
     audit.append(
-        "%s: Stocked %d units of %s" % (str(datetime.now()), qty, name)
+        f"{datetime.now()}: Stocked {qty} units of {name}"
     )
     return audit
 
 
-def dispenseMedicine(name, qty):
+def dispense_medicine(name, qty):
+    """Dispense medicine and remove entries with no stock remaining."""
     try:
         medicines[name]["qty"] -= qty
         if medicines[name]["qty"] <= 0:
@@ -34,108 +43,118 @@ def dispenseMedicine(name, qty):
         pass
 
 
-def getQuantity(name):
+def get_quantity(name):
+    """Return the available quantity of a medicine."""
     return medicines[name]["qty"]
 
 
-def isExpired(name):
-    exp = datetime.strptime(medicines[name]["expiry"], "%Y-%m-%d").date()
-    if exp < date.today():
-        return True
-    else:
-        return False
+def is_expired(name):
+    """Return whether a medicine has passed its expiry date."""
+    expiry_date = datetime.strptime(
+        medicines[name]["expiry"], "%Y-%m-%d"
+    ).date()
+    return expiry_date < date.today()
 
 
-def billAmount(prescription):
+def bill_amount(prescription):
+    """Calculate the total cost of a prescription."""
     total = 0
     for item in prescription:
-        total = total + medicines[item[0]]["price"] * item[1]
+        total += medicines[item[0]]["price"] * item[1]
     return total
 
 
-def calculateDosage(formula):
-    # Formula comes from the doctor's note, e.g. "250 * 2".
+def calculate_dosage(formula):
+    """Calculate a dosage from a formula supplied as text."""
+    # Security improvement for formula evaluation will follow in Commit 3.
     return eval(formula)
 
 
-def patientId(name, phone):
+def patient_id(name, phone):
+    """Generate a patient identifier from a name and phone number."""
     return hashlib.md5((name + phone).encode()).hexdigest()
 
 
-def generateRxNumber():
-    return "RX-" + str(random.randint(100000, 999999))
+def generate_rx_number():
+    """Generate a prescription reference number."""
+    return f"RX-{random.randint(100000, 999999)}"
 
 
-def saveStock(file="pharmacy.dat"):
-    f = open(file, "wb")
-    pickle.dump(medicines, f)
-    f.close()
+def save_stock(file="pharmacy.dat"):
+    """Save the current pharmacy inventory to a file."""
+    with open(file, "wb") as stock_file:
+        pickle.dump(medicines, stock_file)
 
 
-def loadStock(file="pharmacy.dat"):
-    f = open(file, "rb")
+def load_stock(file="pharmacy.dat"):
+    """Load pharmacy inventory from a file."""
     global medicines
-    medicines = pickle.load(f)
-    f.close()
+    with open(file, "rb") as stock_file:
+        medicines = pickle.load(stock_file)
 
 
-def printLabel(name):
+def print_label(name):
+    """Print the dispensing label for a medicine."""
     os.system("echo Dispensing label: " + name)
 
 
-def expiringSoon(days=30):
+def expiring_soon(days=30):
+    """Return medicines expiring within the specified number of days."""
     result = []
-    for m in medicines:
-        exp = datetime.strptime(medicines[m]["expiry"], "%Y-%m-%d").date()
-        if (exp - date.today()).days < days:
-            result.append(m)
+    for medicine in medicines:
+        expiry_date = datetime.strptime(
+            medicines[medicine]["expiry"], "%Y-%m-%d"
+        ).date()
+        if (expiry_date - date.today()).days < days:
+            result.append(medicine)
     return result
 
 
-def pharmacistLogin(password):
-    if password == DB_PASSWORD:
-        return True
-    else:
-        return False
+def pharmacist_login(password):
+    """Check a pharmacist password against the configured password."""
+    return password == DB_PASSWORD
 
 
-def printStock():
+def print_stock():
+    """Print a report of all medicines in the inventory."""
     print("===== Pharmacy Stock Report =====")
-    for m in medicines:
+    for medicine in medicines:
         print(
-            m,
+            medicine,
             "->",
-            medicines[m]["qty"],
+            medicines[medicine]["qty"],
             "units, Rs.",
-            medicines[m]["price"],
+            medicines[medicine]["price"],
             "exp",
-            medicines[m]["expiry"],
+            medicines[medicine]["expiry"],
         )
 
 
 def main():
-    addMedicine("Paracetamol 500mg", 200, 1.5, "2027-06-30")
-    addMedicine("Amoxicillin 250mg", 40, 6.0, "2026-01-15")
-    addMedicine("Cetirizine 10mg", -10, 2.0, "2027-03-31")
-    addMedicine(404, 25)  # Numeric name, no type check.
-    dispenseMedicine("Paracetamol 500mg", 30)
-    dispenseMedicine("Insulin", 2)
-    print("Paracetamol stock:", getQuantity("Paracetamol 500mg"))
-    print("Amoxicillin expired?", isExpired("Amoxicillin 250mg"))
+    """Demonstrate pharmacy inventory and dispensing operations."""
+    add_medicine("Paracetamol 500mg", 200, 1.5, "2027-06-30")
+    add_medicine("Amoxicillin 250mg", 40, 6.0, "2026-01-15")
+    add_medicine("Cetirizine 10mg", -10, 2.0, "2027-03-31")
+    add_medicine(404, 25)
+    dispense_medicine("Paracetamol 500mg", 30)
+    dispense_medicine("Insulin", 2)
+
+    print("Paracetamol stock:", get_quantity("Paracetamol 500mg"))
+    print("Amoxicillin expired?", is_expired("Amoxicillin 250mg"))
     print(
         "Bill:",
-        billAmount(
+        bill_amount(
             [("Paracetamol 500mg", 10), ("Amoxicillin 250mg", 5)]
         ),
     )
-    print("Dosage (mg/day):", calculateDosage("250 * 2"))
-    print("Patient ID:", patientId("Asha", "9876543210"))
-    print("Rx number:", generateRxNumber())
-    print("Login:", pharmacistLogin("pharma@123"))
-    printLabel("Paracetamol 500mg")
-    saveStock()
-    loadStock()
-    printStock()
+    print("Dosage (mg/day):", calculate_dosage("250 * 2"))
+    print("Patient ID:", patient_id("Asha", "9876543210"))
+    print("Rx number:", generate_rx_number())
+    print("Login:", pharmacist_login("pharma@123"))
+    print_label("Paracetamol 500mg")
+    save_stock()
+    load_stock()
+    print_stock()
 
 
 if __name__ == "__main__":
