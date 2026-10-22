@@ -1,0 +1,7 @@
+﻿python : Could not find platform independent libraries <prefix>
+At line:1 char:1
++ python -m flake8 pharmacy_manager.py 2>&1 | Out-File -Encoding utf8 f ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Could not find ...raries <prefix>:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
